@@ -9,15 +9,10 @@ def check_response(resp):
         raise Exception(verd)
 
 
-def correct_scale_value(kind):
-    if kind == "house" or kind == "metro":
-        return "0.005,0.005"
-    if kind == "street":
-        return "0.007, 0.007"
-    if kind == "district":
-        return "0.01, 0.01"
-    if kind == "locality":
-        return "0.05, 0.05"
+def correct_scale_value(bounded_by):
+    lon1, lat1 = map(float, bounded_by["upperCorner"].split())
+    lon2, lat2 = map(float, bounded_by["lowerCorner"].split())
+    return f"{abs(lon1 - lon2)},{abs(lat1 - lat2)}"
 
 
 def get_points(*places):
@@ -25,7 +20,7 @@ def get_points(*places):
 
 
 def get_description(place: str):
-    description = f"{get_place_info(place)}"
+    description = f"{get_place_info(place)['coords']}"
     return description
 
 
@@ -39,9 +34,9 @@ def get_place_info(place: str):
     r = response.json()
     toponym = r["response"]["GeoObjectCollection"]["featureMember"][0]["GeoObject"]
     ll = toponym["Point"]["pos"]
-    kind = toponym["metaDataProperty"]["GeocoderMetaData"]["kind"]
+    bounded_by = toponym["boundedBy"]["Envelope"]
 
-    return {"coords": ll.replace(" ", ","), "kind": kind}
+    return {"coords": ll.replace(" ", ","), "bounded_by": bounded_by}
 
 
 def get_image(info: dict, points=None):
@@ -49,7 +44,7 @@ def get_image(info: dict, points=None):
         points = []
     static_map_url = "http://static-maps.yandex.ru/1.x/"
     params = {"ll": info["coords"],
-              "spn": correct_scale_value(info["kind"]),
+              "spn": correct_scale_value(info["bounded_by"]),
               "pt": "~".join(points),
               "l": "map"}
 
